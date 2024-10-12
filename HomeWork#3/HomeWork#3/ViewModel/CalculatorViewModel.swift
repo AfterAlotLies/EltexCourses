@@ -66,7 +66,7 @@ private extension CalculatorViewModel {
         var result: Double = 0
         switch symbol {
         case "%":
-            result = firstValue / 1000
+            result = firstValue / 100
             if checkFormate(value: result){
                 displayValue = String(Int(result))
             } else {
