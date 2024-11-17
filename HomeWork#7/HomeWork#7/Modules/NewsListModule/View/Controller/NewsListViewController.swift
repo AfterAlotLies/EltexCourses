@@ -17,7 +17,6 @@ final class NewsListViewController: UIViewController {
     }()
     
     private let viewModel = NewsListViewModel()
-    private var newsModels: [NewsModel]?
     private var subscriptions: Set<AnyCancellable> = []
     
     override func viewDidLoad() {
@@ -31,10 +30,30 @@ private extension NewsListViewController {
     
     func setupBindings() {
         viewModel.$newsData
-            .sink { data in
-                self.newsModels = data
-                if let newsModels = self.newsModels {
-                    self.newsListView.setNewsData(newsModels)
+            .sink { [weak self] data in
+                if let data = data {
+                    self?.newsListView.setNewsData(data)
+                }
+            }
+            .store(in: &subscriptions)
+        
+        viewModel.$isLoading
+            .sink { [weak self] isLoading in
+                if isLoading {
+                    self?.newsListView.setLoaderActive()
+                } else {
+                    self?.newsListView.setLoaderInactive()
+                }
+            }
+            .store(in: &subscriptions)
+        
+        viewModel.$selectedCellData
+            .sink { cellDataInfo in
+                if let cellData = cellDataInfo {
+                    let newInfoViewModel = NewInfoViewModel()
+                    newInfoViewModel.getNewInfo(cellData)
+                    let newInfoController = NewInfoViewController(viewModel: newInfoViewModel)
+                    self.navigationController?.pushViewController(newInfoController, animated: true)
                 }
             }
             .store(in: &subscriptions)
