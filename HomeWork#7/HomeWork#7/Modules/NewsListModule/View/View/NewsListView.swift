@@ -131,7 +131,7 @@ extension NewsListView: UIScrollViewDelegate {
         let frameHeight = scrollView.frame.size.height
         
         if contentOffset > contentHeight - frameHeight - 100, !viewModel.isLoading {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 self.viewModel.loadNextPage()
             }
         }

@@ -32,8 +32,8 @@ final class NewsListViewModel {
         buttonTapped
             .sink { sortType in
                 self.isSorted = sortType != .noSort
-                self.makeRequestBaseOnSort(by: sortType)
                 self.currentSortType = sortType
+                self.makeRequestBaseOnSort(by: sortType)
             }
             .store(in: &subscriptions)
     }
@@ -52,6 +52,8 @@ final class NewsListViewModel {
 private extension NewsListViewModel {
     
     func loadNextPageWithSort() {
+        guard !isLoading else { return }
+        isLoading = true
         currentPage += 1
         
         networkService.getDataBySort(textFieldWord, currentSortType)
@@ -69,10 +71,12 @@ private extension NewsListViewModel {
                 case .failure(let error):
                     print(error)
                 }
+                self.isLoading = false
             } receiveValue: { [weak self] newData in
                 guard let self = self else { return }
                 self.allFethedData.append(contentsOf: newData)
                 self.newsData = Array(self.allFethedData.prefix(self.currentPage * self.pageSize))
+                self.isLoading = false
             }
             .store(in: &subscriptions)
     }
