@@ -33,10 +33,9 @@ final class ImagesCell: UICollectionViewCell {
     
     func configureImage(for url: String) {
         someImageView.loadImage(from: URL(string: url)!,
-                                withOptions: [.resize,
-                                              .cached(.memory),
-                                              .circle
-                                              ]
+                                withOptions: [ .circle,
+                                               .cached(.memory),
+                                               .resize]
         )
     }
 }

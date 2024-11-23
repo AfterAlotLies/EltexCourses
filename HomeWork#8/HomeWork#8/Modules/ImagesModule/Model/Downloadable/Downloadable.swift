@@ -8,8 +8,8 @@
 import Foundation
 import UIKit
 
-enum DownloadOptions: Equatable {
-    enum From {
+enum DownloadOptions: Equatable, Codable {
+    enum From: Codable {
         case disk
         case memory
     }
@@ -28,92 +28,107 @@ extension Downloadable where Self: UIImageView {
     func loadImage(from url: URL, withOptions options: [DownloadOptions]) {
         let semaphore = DispatchSemaphore(value: 0)
         DispatchQueue.global().async {
-            if options.contains(where: { $0 == .cached(.memory)} ) {
-                if var imageFromMemoryCache = MemoryManager.shared.getImageFromMemory(.memoryCache, for: url) {
-                    options.forEach {
-                        switch $0 {
-                        case .circle:
-                            print("circle mem")
-                            DispatchQueue.main.async {
-                                imageFromMemoryCache = imageFromMemoryCache.maskRoundedImage(image: imageFromMemoryCache, radius: self.bounds.height / 2) ?? imageFromMemoryCache
-                                semaphore.signal()
-                            }
-                            semaphore.wait()
-                        case .resize:
-                            print("resize mem")
-                            DispatchQueue.main.async {
-                                let imageSize = self.bounds.size
-                                DispatchQueue.global().async {
-                                    imageFromMemoryCache = imageFromMemoryCache.resizeImage(to: imageSize) ?? imageFromMemoryCache
-                                    semaphore.signal()
-                                }
-                            }
-                            semaphore.wait()
-                        default:
-                            break
-                        }
-                    }
-                    DispatchQueue.main.async {
-                        self.image = imageFromMemoryCache
-                    }
-                    return
-                }
-            }
-            if options.contains(where: { $0 == .cached(.disk) }) {
-                if var imageFromDiskMemory = MemoryManager.shared.getImageFromMemory(.diskCache, for: url) {
-                    options.forEach {
-                        switch $0 {
-                        case .circle:
-                            DispatchQueue.main.async {
-                                imageFromDiskMemory = imageFromDiskMemory.maskRoundedImage(image: imageFromDiskMemory, radius: self.bounds.height / 2) ?? imageFromDiskMemory
-                                semaphore.signal()
-                            }
-                            semaphore.wait()
-                        case .resize:
-                            DispatchQueue.main.async {
-                                let imageSize = self.bounds.size
-                                DispatchQueue.global().async {
-                                    imageFromDiskMemory = imageFromDiskMemory.resizeImage(to: imageSize) ?? imageFromDiskMemory
-                                    semaphore.signal()
-                                }
-                            }
-                            semaphore.wait()
-                        default:
-                            break
-                        }
-                    }
-                    DispatchQueue.main.async {
-                        self.image = imageFromDiskMemory
-                    }
-                    return
-                }
+            var cachedImage: CachedImage?
+            
+            if options.contains(.cached(.memory)) {
+                cachedImage = MemoryManager.shared.getImageFromMemory(.memoryCache, for: url)
             }
             
-            NetworkManager.shared.getUrlData(from: url) { imageData in
-                guard let imageData, var image = UIImage(data: imageData) else { return }
-                options.forEach {
+            if cachedImage == nil, options.contains(.cached(.disk)) {
+                cachedImage = MemoryManager.shared.getImageFromMemory(.diskCache, for: url)
+            }
+            
+            if let cachedImage = cachedImage {
+                let remainingOptions: [DownloadOptions]
+                if !cachedImage.appliedOptions.isEmpty {
+                    //исключение из входящих параметров операций, для совершения остаточных операций
+                    remainingOptions = options.filter { !cachedImage.appliedOptions.contains($0) }
+                } else {
+                    remainingOptions = options
+                }
+                
+                var image = cachedImage.image
+                
+                //остаточные операции
+                remainingOptions.forEach {
                     switch $0 {
-                    case .resize:
-                        image = image.resizeImage(to: self.bounds.size) ?? image
-                    case .cached(.memory):
-                        MemoryManager.shared.saveImageToMemory(.memoryCache, image, for: url)
-                    case .cached(.disk):
-                        MemoryManager.shared.saveImageToMemory(.diskCache, image, for: url)
                     case .circle:
-                        image = image.maskRoundedImage(image: image, radius: self.bounds.height / 2) ?? image
+                        DispatchQueue.main.async {
+                            image = image.maskRoundedImage(image: image, radius: self.bounds.height / 2) ?? image
+                            semaphore.signal()
+                        }
+                        semaphore.wait()
+                    case .resize:
+                        if options.contains(.circle) {
+                            DispatchQueue.main.async {
+                                let imageSize = self.bounds.size
+                                let radius = self.bounds.height / 2
+                                DispatchQueue.global().async {
+                                    image = image.resizeImage(to: imageSize, preserveCorners: true, cornerRadius: radius) ?? image
+                                    semaphore.signal()
+                                }
+                            }
+                        } else {
+                            DispatchQueue.main.async {
+                                let imageSize = self.bounds.size
+                                let radius = self.bounds.height / 2
+                                DispatchQueue.global().async {
+                                    image = image.resizeImage(to: imageSize, preserveCorners: false, cornerRadius: radius) ?? image
+                                    semaphore.signal()
+                                }
+                            }
+                        }
+                        
+                        semaphore.wait()
+                    default:
+                        break
                     }
                 }
+                
                 DispatchQueue.main.async {
                     self.image = image
                 }
+            } else {
+                //если в кеше ничего нет - идем в сеть
+                NetworkManager.shared.getUrlData(from: url) { imageData in
+                    guard let imageData, var image = UIImage(data: imageData) else { return }
+                    
+                    var appliedOptions: [DownloadOptions] = []
+                    let imageSize = self.bounds.size
+                    let imageRadius = self.bounds.height / 2
+                    
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        options.forEach { option in
+                            switch option {
+                            case .resize:
+                                if options.contains(.circle) {
+                                    image = image.resizeImage(to: imageSize, preserveCorners: true, cornerRadius: imageRadius) ?? image
+                                    appliedOptions.append(.resize)
+                                } else {
+                                    image = image.resizeImage(to: imageSize, preserveCorners: false, cornerRadius: imageRadius) ?? image
+                                    appliedOptions.append(.resize)
+                                }
+                                
+                            case .cached(.memory):
+                                let cachedImage = CachedImage(image: image, appliedOptions: appliedOptions)
+                                MemoryManager.shared.saveImageToMemory(.memoryCache, cachedImage, for: url)
+                                
+                            case .cached(.disk):
+                                let cachedImage = CachedImage(image: image, appliedOptions: appliedOptions)
+                                MemoryManager.shared.saveImageToMemory(.diskCache, cachedImage, for: url)
+                                
+                                //почему то при одном этом параметре не закругляет картинки?
+                            case .circle:
+                                image = image.maskRoundedImage(image: image, radius: imageRadius) ?? image
+                                appliedOptions.append(.circle)
+                            }
+                        }
+                        DispatchQueue.main.async {
+                            self.image = image
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-private extension Downloadable where Self: UIImageView {
-    
-    func getImagesFromCacheByType(_ cacheType: DownloadOptions) {
-        
     }
 }
