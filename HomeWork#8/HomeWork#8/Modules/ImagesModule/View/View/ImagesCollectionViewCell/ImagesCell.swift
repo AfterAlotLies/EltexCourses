@@ -29,10 +29,12 @@ final class ImagesCell: UICollectionViewCell {
     
     override func prepareForReuse() {
         someImageView.image = nil
+        someImageView.cancelImageDownload()
     }
     
     func configureImage(for url: String) {
-        someImageView.loadImage(from: URL(string: url)!,
+        guard let url = URL(string: url) else { return }
+        someImageView.loadImage(from: url,
                                 withOptions: [ .circle,
                                                .cached(.memory),
                                                .resize]

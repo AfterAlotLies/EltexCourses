@@ -37,7 +37,10 @@ final class ImagesView: UIView {
         "https://www.cnet.com/a/img/resize/c44672906aee2a0bfaf39bba01791b7bf5a33572/hub/2024/11/20/fc18aa42-005a-4254-9467-4d57d4957cf4/magsafe-black-friday.png?auto=webp&fit=crop&height=675&width=1200",
     ]
     
-    override init(frame: CGRect) {
+    private let viewModel: ImagesViewModel
+    
+    init(frame: CGRect, viewModel: ImagesViewModel) {
+        self.viewModel = viewModel
         super.init(frame: frame)
         setupView()
     }
@@ -51,7 +54,7 @@ final class ImagesView: UIView {
 extension ImagesView: UICollectionViewDataSource {
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 512
+        return viewModel.countOfImages
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -59,7 +62,7 @@ extension ImagesView: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
-        let cellData = imagesURLs[indexPath.item % imagesURLs.count]
+        let cellData = viewModel.getImageURL(at: indexPath.item)
         cell.configureImage(for: cellData)
         return cell
     }

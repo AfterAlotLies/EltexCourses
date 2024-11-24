@@ -19,5 +19,11 @@ final class ImagesViewModel {
         "https://www.cnet.com/a/img/resize/c44672906aee2a0bfaf39bba01791b7bf5a33572/hub/2024/11/20/fc18aa42-005a-4254-9467-4d57d4957cf4/magsafe-black-friday.png?auto=webp&fit=crop&height=675&width=1200",
     ]
     
-   
+    var countOfImages: Int {
+        64
+    }
+    
+    func getImageURL(at index: Int) -> String {
+        imagesURLs[index % imagesURLs.count]
+    }
 }

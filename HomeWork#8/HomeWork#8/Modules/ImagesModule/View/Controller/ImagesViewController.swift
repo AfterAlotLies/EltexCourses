@@ -10,10 +10,12 @@ import UIKit
 class ImagesViewController: UIViewController {
     
     private lazy var imagesView: ImagesView = {
-        let view = ImagesView()
+        let view = ImagesView(frame: .zero, viewModel: viewModel)
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
+    
+    private let viewModel: ImagesViewModel = ImagesViewModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()

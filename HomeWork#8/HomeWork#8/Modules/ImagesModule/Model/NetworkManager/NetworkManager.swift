@@ -10,19 +10,40 @@ import UIKit
 
 final class NetworkManager {
     static let shared = NetworkManager()
-    
-    private init () {}
-    
-    func getUrlData(from url: URL, completion: @escaping ((Data?) -> Void)) {
-        DispatchQueue.global().async {
-            let imageDataTask = URLSession.shared.dataTask(with: url) { data, _, _ in
-                if let dataImage = data {
-                    DispatchQueue.main.async {
-                        completion(dataImage)
-                    }
-                }
+    private var tasks: [UUID: URLSessionTask] = [:]
+    private let queue = DispatchQueue(label: "com.networkmanager.tasks", attributes: .concurrent)
+
+    private init() {}
+
+    func getUrlData(from url: URL, requestID: UUID, completion: @escaping ((Data?) -> Void)) {
+        queue.async(flags: .barrier) {
+            if let existingTask = self.tasks[requestID] {
+                existingTask.cancel()
             }
-            imageDataTask.resume()
+        }
+
+        let task = URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
+            guard let self = self else { return }
+            self.queue.async(flags: .barrier) {
+                self.tasks.removeValue(forKey: requestID)
+            }
+            DispatchQueue.main.async {
+                completion(data)
+            }
+        }
+
+        queue.async(flags: .barrier) {
+            self.tasks[requestID] = task
+        }
+
+        task.resume()
+    }
+
+    func cancelTask(requestID: UUID) {
+        queue.async(flags: .barrier) {
+            self.tasks[requestID]?.cancel()
+            self.tasks.removeValue(forKey: requestID)
         }
     }
 }
+
