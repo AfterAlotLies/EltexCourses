@@ -62,8 +62,8 @@ extension ImagesView: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
-        let cellData = viewModel.getImageURL(at: indexPath.item)
-        cell.configureImage(for: cellData)
+        cell.viewModel = viewModel
+        cell.configureImage(onCell: indexPath.item)
         return cell
     }
 }

@@ -17,6 +17,8 @@ final class ImagesCell: UICollectionViewCell {
         return imageView
     }()
     
+    var viewModel: ImagesViewModel?
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupCell()
@@ -32,13 +34,16 @@ final class ImagesCell: UICollectionViewCell {
         someImageView.cancelImageDownload()
     }
     
-    func configureImage(for url: String) {
-        guard let url = URL(string: url) else { return }
-        someImageView.loadImage(from: url,
-                                withOptions: [ .circle,
-                                               .cached(.memory),
-                                               .resize]
-        )
+    func configureImage(onCell index: Int) {
+        viewModel?.onLoadImages = { [weak self] url, options in
+            guard let url = URL(string: url),
+            let self = self
+            else {
+                return
+            }
+            self.someImageView.loadImage(from: url, withOptions: options)
+        }
+        viewModel?.loadImage(for: index)
     }
 }
 
