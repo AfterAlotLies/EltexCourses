@@ -95,10 +95,9 @@ extension Downloadable where Self: UIImageView {
             } else {
                 //если в кеше ничего нет - идем в сеть
                 if let currentRequestID {
-                    NetworkManager.shared.getUrlData(from: url, requestID: currentRequestID) { [weak self] imageData in
+                    NetworkManager.shared.getUrlData(from: url, requestID: currentRequestID) { imageData in
                         guard let imageData,
                               var image = UIImage(data: imageData),
-                              let self = self,
                               self.currentRequestID == requestID else {
                             return
                         }

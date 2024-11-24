@@ -11,7 +11,7 @@ import UIKit
 final class NetworkManager {
     static let shared = NetworkManager()
     private var tasks: [UUID: URLSessionTask] = [:]
-    private let queue = DispatchQueue(label: "com.networkmanager.tasks", attributes: .concurrent)
+    private let queue = DispatchQueue(label: "com.vyacheslavgusev.queue", attributes: .concurrent)
 
     private init() {}
 
@@ -41,8 +41,12 @@ final class NetworkManager {
 
     func cancelTask(requestID: UUID) {
         queue.async(flags: .barrier) {
-            self.tasks[requestID]?.cancel()
-            self.tasks.removeValue(forKey: requestID)
+            if self.tasks.isEmpty {
+                return
+            } else {
+                self.tasks[requestID]?.cancel()
+                self.tasks.removeValue(forKey: requestID)
+            }
         }
     }
 }
