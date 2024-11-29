@@ -41,7 +41,6 @@ class ImagesViewController: UIViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
 }
 
 private extension ImagesViewController {
@@ -52,6 +51,19 @@ private extension ImagesViewController {
                 self.imagesListView.getImagesSize(imagesData: images)
             }
             .store(in: &subscriptions)
+        
+        viewModel.navigateToNextScreen
+            .sink { _ in
+                self.showNextScreen()
+            }
+            .store(in: &subscriptions)
+    }
+    
+    func showNextScreen() {
+        let mediaUploadNetworkService: MediaUploadNetworkProtocol = NetworkService()
+        let mediaUploadViewModel = MediaUploadViewModel(networkService: mediaUploadNetworkService)
+        let mediaUploadViewContoller = MediaUploadViewController(viewModel: mediaUploadViewModel)
+        self.navigationController?.pushViewController(mediaUploadViewContoller, animated: true)
     }
     
     func setupController() {
