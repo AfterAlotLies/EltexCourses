@@ -10,12 +10,13 @@ import Combine
 
 final class ImagesListViewModel {
     
-    private let networkManager: ImagesListNetworkService
+    private let networkManager: ImagesListNetworkProtocol
     private var subscriptions: Set<AnyCancellable> = []
+    private(set) var navigateToNextScreen = PassthroughSubject<Void, Never>()
     
     @Published private(set) var images: [ImagesListModel] = []
     
-    init(networkManager: ImagesListNetworkService) {
+    init(networkManager: ImagesListNetworkProtocol) {
         self.networkManager = networkManager
     }
     
@@ -33,6 +34,10 @@ final class ImagesListViewModel {
                 self.images = imagesData
             }
             .store(in: &subscriptions)
+    }
+    
+    func buttonDidTapped() {
+        navigateToNextScreen.send()
     }
 }
 

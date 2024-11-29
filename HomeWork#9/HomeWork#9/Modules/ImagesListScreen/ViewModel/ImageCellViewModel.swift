@@ -16,10 +16,10 @@ final class ImageCellViewModel {
     
     private var imageUrl: String?
     private var subscriptions: Set<AnyCancellable> = []
-    private let networkManager: ImagesListNetworkService
+    private let networkManager: ImagesListNetworkProtocol
     private var downloadingProgressPublisher = PassthroughSubject<Float, Never>()
     
-    init(networkManager: ImagesListNetworkService) {
+    init(networkManager: ImagesListNetworkProtocol) {
         self.networkManager = networkManager
     }
     
