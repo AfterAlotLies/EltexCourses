@@ -22,6 +22,17 @@ final class ImagesListView: UIView {
         return collectionView
     }()
     
+    private lazy var showNextScreenButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.setTitle("Добавить изображение на сервер", for: .normal)
+        button.layer.cornerRadius = 10
+        button.layer.borderColor = UIColor.black.cgColor
+        button.layer.borderWidth = 1
+        button.addTarget(self, action: #selector(showNextControllerButtonHandler), for: .touchUpInside)
+        return button
+    }()
+    
     private let viewModel: ImagesListViewModel
     private let imageCellViewModel: ImageCellViewModel
     private var images: [ImagesListModel]?
@@ -73,8 +84,14 @@ extension ImagesListView: UICollectionViewDelegate {
 
 private extension ImagesListView {
     
+    @objc
+    func showNextControllerButtonHandler() {
+        viewModel.buttonDidTapped()
+    }
+    
     func setupView() {
         addSubview(imagesCollectionView)
+        addSubview(showNextScreenButton)
         
         setupConstraints()
     }
@@ -83,8 +100,15 @@ private extension ImagesListView {
         NSLayoutConstraint.activate([
             imagesCollectionView.topAnchor.constraint(equalTo: topAnchor),
             imagesCollectionView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            imagesCollectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            imagesCollectionView.bottomAnchor.constraint(equalTo: bottomAnchor)
+            imagesCollectionView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16)
+        ])
+        
+        NSLayoutConstraint.activate([
+            showNextScreenButton.topAnchor.constraint(equalTo: imagesCollectionView.bottomAnchor, constant: 16),
+            showNextScreenButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+            showNextScreenButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+            showNextScreenButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -16),
+            showNextScreenButton.heightAnchor.constraint(equalToConstant: 60)
         ])
     }
 }
