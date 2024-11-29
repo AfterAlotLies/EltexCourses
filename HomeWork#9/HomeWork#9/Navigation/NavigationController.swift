@@ -18,7 +18,7 @@ final class NavigationController: UINavigationController {
 private extension NavigationController {
     
     func setupNavigation() {
-        let networkManager = ImagesListNetworkService()
+        let networkManager: ImagesListNetworkProtocol = NetworkService()
         let imagesViewModel = ImagesListViewModel(networkManager: networkManager)
         let imageCellViewModel = ImageCellViewModel(networkManager: networkManager)
         let imagesListController = ImagesViewController(viewModel: imagesViewModel, imageCellViewModel: imageCellViewModel)
