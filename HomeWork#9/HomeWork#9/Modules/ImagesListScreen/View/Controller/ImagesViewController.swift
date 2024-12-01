@@ -24,11 +24,11 @@ class ImagesViewController: UIViewController {
         super.viewDidLoad()
         setupController()
         setupBindings()
+        viewModel.getAllImagesData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        viewModel.getAllImagesData()
     }
     
     init(viewModel: ImagesListViewModel, imageCellViewModel: ImageCellViewModel) {
@@ -47,14 +47,14 @@ private extension ImagesViewController {
     
     func setupBindings() {
         viewModel.$images
-            .sink { images in
-                self.imagesListView.getImagesSize(imagesData: images)
+            .sink { [weak self] images in
+                self?.imagesListView.getImagesSize(imagesData: images)
             }
             .store(in: &subscriptions)
         
         viewModel.navigateToNextScreen
-            .sink { _ in
-                self.showNextScreen()
+            .sink { [weak self] _ in
+                self?.showNextScreen()
             }
             .store(in: &subscriptions)
     }
@@ -62,7 +62,7 @@ private extension ImagesViewController {
     func showNextScreen() {
         let mediaUploadNetworkService: MediaUploadNetworkProtocol = NetworkService()
         let mediaUploadViewModel = MediaUploadViewModel(networkService: mediaUploadNetworkService)
-        let mediaUploadViewContoller = MediaUploadViewController(viewModel: mediaUploadViewModel)
+        let mediaUploadViewContoller = MediaUploadViewController(viewModel: mediaUploadViewModel, imagesListViewModel: viewModel)
         self.navigationController?.pushViewController(mediaUploadViewContoller, animated: true)
     }
     

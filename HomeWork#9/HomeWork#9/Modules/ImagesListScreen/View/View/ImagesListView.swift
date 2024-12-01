@@ -17,7 +17,6 @@ final class ImagesListView: UIView {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.dataSource = self
-        collectionView.delegate = self
         collectionView.register(ImageCollectionCell.self, forCellWithReuseIdentifier: ImageCollectionCell.identifier)
         return collectionView
     }()
@@ -70,15 +69,12 @@ extension ImagesListView: UICollectionViewDataSource {
         let imageUrl = imagesModel[indexPath.item].url
         imageCellViewModel.configureVm(with: imageUrl)
         cell.viewModel = imageCellViewModel
-        cell.configure(imageUrl)
+        if let cachedImage = MemoryService.shared.getImageFromMemory(for: imageUrl) {
+            cell.configureForCachedImage(cachedImage, imageUrl)
+        } else {
+            cell.configure(imageUrl)
+        }
         return cell
-    }
-}
-
-extension ImagesListView: UICollectionViewDelegate {
-    
-    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        print(indexPath.item)
     }
 }
 

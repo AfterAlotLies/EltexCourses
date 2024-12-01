@@ -37,9 +37,9 @@ final class ImageCellViewModel {
             .sink { result in
                 switch result {
                 case .finished:
-                    print("image loaded")
-                case .failure(let error):
-                    print("error to load image \(error.localizedDescription)")
+                    print("image loaded to cell")
+                case .failure(_):
+                    print("error")
                 }
             } receiveValue: { imageData in
                 self.imageData[url] = imageData

@@ -26,7 +26,7 @@ final class ImagesListViewModel {
             .sink { result in
                 switch result {
                 case .finished:
-                    print("success")
+                    print("success to get data")
                 case .failure(let error):
                     print(error.localizedDescription)
                 }
@@ -38,6 +38,10 @@ final class ImagesListViewModel {
     
     func buttonDidTapped() {
         navigateToNextScreen.send()
+    }
+    
+    func addNewImageURL(_ url: String) {
+        images.insert(ImagesListModel(url: url), at: images.endIndex)
     }
 }
 

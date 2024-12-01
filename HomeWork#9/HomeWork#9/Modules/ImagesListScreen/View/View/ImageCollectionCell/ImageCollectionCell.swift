@@ -16,7 +16,6 @@ final class ImageCollectionCell: UICollectionViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.isHidden = true
-        imageView.frame = CGRect(x: 0, y: 0, width: 200, height: 200)
         return imageView
     }()
     
@@ -35,11 +34,27 @@ final class ImageCollectionCell: UICollectionViewCell {
         return bar
     }()
     
+    private lazy var progressLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
+    }()
+    
+    private lazy var errorLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        label.textColor = .red
+        return label
+    }()
+    
     var viewModel: ImageCellViewModel?
     
     private var subscriptions: Set<AnyCancellable> = []
     private var imageUrl: String?
     private var isLoaded: Bool = false
+    private var isFailed: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -59,6 +74,14 @@ final class ImageCollectionCell: UICollectionViewCell {
         self.imageUrl = imageUrl
         setupBindingForCell()
     }
+    
+    func configureForCachedImage(_ image: UIImage, _ url: String) {
+        imageView.isHidden = false
+        downloadImageButton.isHidden = true
+        isLoaded = true
+        imageView.image = image
+        imageView.contentMode = .scaleAspectFit
+    }
 }
 
 private extension ImageCollectionCell {
@@ -75,11 +98,11 @@ private extension ImageCollectionCell {
                     if self.progressBar.progress == 1.0 {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                             self.progressBar.isHidden = true
+                            self.progressLabel.isHidden = true
                             self.imageView.image = UIImage(data: data)
                             self.imageView.contentMode = .scaleAspectFit
                         }
                     }
-                   
                 } else {
                     self.imageView.isHidden = true
                     self.downloadImageButton.isHidden = false
@@ -93,8 +116,10 @@ private extension ImageCollectionCell {
                 if let progress = progress[url] {
                     if !self.isLoaded {
                         self.downloadImageButton.isHidden = true
+                        self.progressLabel.isHidden = false
                         self.progressBar.isHidden = false
                         self.progressBar.setProgress(progress, animated: true)
+                        self.progressLabel.text = "\(Int(progress * 100))%"
                     } else {
                         return
                     }
@@ -115,6 +140,7 @@ private extension ImageCollectionCell {
         contentView.addSubview(imageView)
         contentView.addSubview(downloadImageButton)
         contentView.addSubview(progressBar)
+        contentView.addSubview(progressLabel)
         
         contentView.layer.borderColor = UIColor.black.cgColor
         contentView.layer.borderWidth = 1
@@ -134,6 +160,11 @@ private extension ImageCollectionCell {
         NSLayoutConstraint.activate([
             downloadImageButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             downloadImageButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+        ])
+        
+        NSLayoutConstraint.activate([
+            progressLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            progressLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, constant: -16)
         ])
         
         NSLayoutConstraint.activate([
