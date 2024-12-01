@@ -8,12 +8,6 @@
 import Foundation
 import Combine
 
-struct ImageDownload {
-    let dataPublisher: AnyPublisher<Data, Error>
-    let progressPublisher: AnyPublisher<Float, Never>
-}
-
-
 final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetworkProtocol {
     
     enum NetworkErrors: Error {
@@ -24,9 +18,7 @@ final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetw
         case invalidResponseData
     }
     
-    private var downloadImagePromise: ((Result<Data, Error>) -> Void)?
-    var downloadProgressPublisher: PassthroughSubject<Float, Never> = PassthroughSubject<Float, Never>()
-
+    var activeDownloads: [URLSessionTask: Download] = [:]
     
     func fetchImagesData<T: Codable>(model: T.Type) -> AnyPublisher<T, Error> {
         guard let request = createRequest(with: "http://164.90.163.215:1337/api/upload/files", for: "GET") else {
@@ -41,24 +33,32 @@ final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetw
             .eraseToAnyPublisher()
     }
     
-    func fetchImage(imageURL: String) -> AnyPublisher<Data, Error> {
+    func fetchImage(imageURL: String) -> ImageDownloadPublisher {
         guard let request = createRequest(with: "http://164.90.163.215:1337\(imageURL)", for: "GET") else {
-            return Fail(error: NetworkErrors.invalidURL)
+            let dataPublisher = Fail<Data, Error>(error: NetworkErrors.invalidURL)
                 .eraseToAnyPublisher()
+            let progressPublisher = Empty<Float, Never>().eraseToAnyPublisher()
+            return ImageDownloadPublisher(dataPublisher: dataPublisher, progressPublisher: progressPublisher)
         }
         
         let session = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
-        
         let downloadTask = session.downloadTask(with: request)
-        downloadTask.resume()
+        let progressPublisher = PassthroughSubject<Float, Never>()
         
-        return Deferred {
-             Future<Data, Error> { promise in
-                self.downloadImagePromise = promise
+        let dataPublisher = Deferred {
+            Future<Data, Error> { promise in
+                let download = Download(task: downloadTask,
+                                        progressPublisher: progressPublisher,
+                                        promise: promise)
+                self.activeDownloads[downloadTask] = download
+                downloadTask.resume()
             }
         }
-        .receive(on: DispatchQueue.main)
-        .eraseToAnyPublisher()
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+        
+        return ImageDownloadPublisher(dataPublisher: dataPublisher,
+                                      progressPublisher: progressPublisher.eraseToAnyPublisher())
     }
     
     func getImageFromUrl(from url: String) -> AnyPublisher<Data, Error> {
@@ -115,18 +115,26 @@ final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetw
 
 extension NetworkService: URLSessionDownloadDelegate {
     
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) {
+        
+        guard let download = activeDownloads[downloadTask] else { return }
         let progress = Float(totalBytesWritten) / Float(totalBytesExpectedToWrite)
-        downloadProgressPublisher.send(progress)
+        download.progressPublisher.send(progress)
     }
     
-    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {
+        guard let download = activeDownloads[downloadTask] else { return }
         do {
             let data = try Data(contentsOf: location)
-            downloadImagePromise?(.success(data))
+            download.promise(.success(data))
         } catch {
-            downloadImagePromise?(.failure(NetworkErrors.invalidData))
+            download.promise(.failure(NetworkErrors.invalidData))
         }
+        download.progressPublisher.send(completion: .finished)
+        activeDownloads[downloadTask] = nil
     }
 }
 

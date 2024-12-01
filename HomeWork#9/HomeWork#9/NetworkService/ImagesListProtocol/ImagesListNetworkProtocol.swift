@@ -10,6 +10,6 @@ import Foundation
 
 protocol ImagesListNetworkProtocol {
     func fetchImagesData<T: Codable>(model: T.Type) -> AnyPublisher<T, Error>
-    func fetchImage(imageURL: String) -> AnyPublisher<Data, Error>
-    var downloadProgressPublisher: PassthroughSubject<Float, Never> { get set }
+    func fetchImage(imageURL: String) -> ImageDownloadPublisher
+    var activeDownloads: [URLSessionTask: Download] { get set }
 }
