@@ -8,15 +8,25 @@
 import Foundation
 import Combine
 
+struct ImageDownload {
+    let dataPublisher: AnyPublisher<Data, Error>
+    let progressPublisher: AnyPublisher<Float, Never>
+}
+
+
 final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetworkProtocol {
     
     enum NetworkErrors: Error {
         case invalidURL
         case invalidData
+        case badServiceResponse
+        case serverError(Int)
+        case invalidResponseData
     }
     
     private var downloadImagePromise: ((Result<Data, Error>) -> Void)?
     var downloadProgressPublisher: PassthroughSubject<Float, Never> = PassthroughSubject<Float, Never>()
+
     
     func fetchImagesData<T: Codable>(model: T.Type) -> AnyPublisher<T, Error> {
         guard let request = createRequest(with: "http://164.90.163.215:1337/api/upload/files", for: "GET") else {
@@ -62,6 +72,45 @@ final class NetworkService: NSObject, ImagesListNetworkProtocol, MediaUploadNetw
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
+    
+    func uploadImageToServer(imageData: Data) -> AnyPublisher<String, Error> {
+        guard var request = createRequest(with: "http://164.90.163.215:1337/api/upload", for: "POST") else {
+            return Fail(error: NetworkErrors.invalidURL)
+                .eraseToAnyPublisher()
+        }
+        let boundary = UUID().uuidString
+        let headers: [String: String] = [
+            "Content-Type": "multipart/form-data; boundary=\(boundary)",
+        ]
+        
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Authorization")
+        
+        let imageName = UUID().uuidString
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"files\"; filename=\"\(imageName).jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        request.httpBody = body
+        request.allHTTPHeaderFields = headers
+        
+        return URLSession.shared.dataTaskPublisher(for: request)
+            .tryMap { result -> String in
+                guard let httpResponse = result.response as? HTTPURLResponse else {
+                    throw NetworkErrors.badServiceResponse
+                }
+                
+                if httpResponse.statusCode == 200 {
+                    return "Success to upload"
+                } else {
+                    throw NetworkErrors.serverError(httpResponse.statusCode)
+                }
+            }
+            .receive(on: DispatchQueue.main)
+            .eraseToAnyPublisher()
+    }
 }
 
 extension NetworkService: URLSessionDownloadDelegate {
@@ -85,8 +134,10 @@ private extension NetworkService {
     
     func createRequest(with url: String, for httpMethod: String) -> URLRequest? {
         guard let url = URL(string: url) else { return nil }
+        let authToken = "11c211d104fe7642083a90da69799cf055f1fe1836a211aca77c72e3e069e7fde735be9547f0917e1a1000efcb504e21f039d7ff55bf1afcb9e2dd56e4d6b5ddec3b199d12a2fac122e43b4dcba3fea66fe428e7c2ee9fc4f1deaa615fa5b6a68e2975cd2f99c65a9eda376e5b6a2a3aee1826ca4ce36d645b4f59f60cf5b74a"
         var request = URLRequest(url: url)
         request.httpMethod = httpMethod
+        request.allHTTPHeaderFields = ["Authorization": "Bearer \(authToken)"]
         return request
     }
 }

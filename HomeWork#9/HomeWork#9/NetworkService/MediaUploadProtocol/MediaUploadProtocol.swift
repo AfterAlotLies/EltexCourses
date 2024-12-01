@@ -10,4 +10,5 @@ import Combine
 
 protocol MediaUploadNetworkProtocol {
     func getImageFromUrl(from url: String) -> AnyPublisher<Data, Error>
+    func uploadImageToServer(imageData: Data) -> AnyPublisher<String, Error>
 }
