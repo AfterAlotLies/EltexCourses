@@ -14,10 +14,20 @@ protocol MediaUploadViewDelegate: AnyObject {
 
 final class MediaUploadView: UIView {
     
-    enum LoadingState {
-        case loadingFromNet
-        case optimizingImage
-        case uploadingOnServer
+    private enum Constants {
+        static let inputUrlPlaceHolder = "Enter your url to download image.."
+        static let getImageFromGalleryButtonTitle = "Загрузить с галереи"
+        static let getImageFromNetButtonTitle = "Загрузить с интернета"
+        static let uploadImageButtonTitle = "Отправить на сервер"
+        static let topAnchorMargin: CGFloat = 16
+        static let leadingAnchorMargin: CGFloat = 16
+        static let trailingAnchorMargin: CGFloat = -16
+    }
+    
+    enum LoadingState: String {
+        case loadingFromNet = "Загрузка изображения из сети..."
+        case optimizingImage = "Оптимизация картинки..."
+        case uploadingOnServer = "Загрузка изображения на сервер..."
     }
     
     private lazy var uploadedImageView: UIImageView = {
@@ -45,40 +55,46 @@ final class MediaUploadView: UIView {
     private lazy var inputUrlToDownloadTextField: UITextField = {
         let textField = UITextField()
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.placeholder = "Enter your url to download image.."
+        textField.placeholder = Constants.inputUrlPlaceHolder
         return textField
     }()
     
     private lazy var getImageFromGalleryButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Загрузить с галереи", for: .normal)
+        button.setTitle(Constants.getImageFromGalleryButtonTitle, for: .normal)
         button.layer.cornerRadius = 10
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.black.cgColor
-        button.addTarget(self, action: #selector(getImageFromGallaryTapped), for: .touchUpInside)
+        button.addTarget(self,
+                         action: #selector(getImageFromGallaryTapped),
+                         for: .touchUpInside)
         return button
     }()
     
     private lazy var getImageFromNetButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Загрузить с интернета", for: .normal)
+        button.setTitle(Constants.getImageFromNetButtonTitle, for: .normal)
         button.layer.cornerRadius = 10
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.black.cgColor
-        button.addTarget(self, action: #selector(getImageFromURLTapped), for: .touchUpInside)
+        button.addTarget(self,
+                         action: #selector(getImageFromURLTapped),
+                         for: .touchUpInside)
         return button
     }()
     
     private lazy var sendImageToServerButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Отправить на сервер", for: .normal)
+        button.setTitle(Constants.uploadImageButtonTitle, for: .normal)
         button.layer.cornerRadius = 10
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.black.cgColor
-        button.addTarget(self, action: #selector(uploadImageToServerTapped), for: .touchUpInside)
+        button.addTarget(self,
+                         action: #selector(uploadImageToServerTapped),
+                         for: .touchUpInside)
         return button
     }()
     
@@ -112,11 +128,11 @@ final class MediaUploadView: UIView {
         loaderImageLabel.isHidden = false
         switch loadingState {
         case .loadingFromNet:
-            loaderImageLabel.text = "Загрузка изображения из сети..."
+            loaderImageLabel.text = loadingState.rawValue
         case .optimizingImage:
-            loaderImageLabel.text = "Оптимизация картинки..."
+            loaderImageLabel.text = loadingState.rawValue
         case .uploadingOnServer:
-            loaderImageLabel.text = "Загрузка изображения на сервер..."
+            loaderImageLabel.text = loadingState.rawValue
         }
     }
     
@@ -189,9 +205,9 @@ private extension MediaUploadView {
     
     func setupConstraints() {
         NSLayoutConstraint.activate([
-            uploadedImageView.topAnchor.constraint(equalTo: self.topAnchor, constant: 16),
-            uploadedImageView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            uploadedImageView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16)
+            uploadedImageView.topAnchor.constraint(equalTo: self.topAnchor, constant: Constants.topAnchorMargin),
+            uploadedImageView.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            uploadedImageView.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin)
         ])
         
         NSLayoutConstraint.activate([
@@ -201,35 +217,35 @@ private extension MediaUploadView {
         
         NSLayoutConstraint.activate([
             loaderImageLabel.topAnchor.constraint(equalTo: imageLoader.bottomAnchor, constant: 6),
-            loaderImageLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            loaderImageLabel.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16)
+            loaderImageLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            loaderImageLabel.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin)
         ])
         
         NSLayoutConstraint.activate([
-            inputUrlToDownloadTextField.topAnchor.constraint(equalTo: uploadedImageView.bottomAnchor, constant: 16),
-            inputUrlToDownloadTextField.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            inputUrlToDownloadTextField.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16),
+            inputUrlToDownloadTextField.topAnchor.constraint(equalTo: uploadedImageView.bottomAnchor, constant: Constants.topAnchorMargin),
+            inputUrlToDownloadTextField.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            inputUrlToDownloadTextField.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin),
             inputUrlToDownloadTextField.heightAnchor.constraint(equalToConstant: 45)
         ])
         
         NSLayoutConstraint.activate([
-            getImageFromGalleryButton.topAnchor.constraint(equalTo: inputUrlToDownloadTextField.bottomAnchor, constant: 16),
-            getImageFromGalleryButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            getImageFromGalleryButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16),
+            getImageFromGalleryButton.topAnchor.constraint(equalTo: inputUrlToDownloadTextField.bottomAnchor, constant: Constants.topAnchorMargin),
+            getImageFromGalleryButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            getImageFromGalleryButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin),
             getImageFromGalleryButton.heightAnchor.constraint(equalToConstant: 45)
         ])
         
         NSLayoutConstraint.activate([
-            getImageFromNetButton.topAnchor.constraint(equalTo: getImageFromGalleryButton.bottomAnchor, constant: 16),
-            getImageFromNetButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            getImageFromNetButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16),
+            getImageFromNetButton.topAnchor.constraint(equalTo: getImageFromGalleryButton.bottomAnchor, constant: Constants.topAnchorMargin),
+            getImageFromNetButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            getImageFromNetButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin),
             getImageFromNetButton.heightAnchor.constraint(equalToConstant: 45)
         ])
         
         NSLayoutConstraint.activate([
-            sendImageToServerButton.topAnchor.constraint(equalTo: getImageFromNetButton.bottomAnchor, constant: 16),
-            sendImageToServerButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 16),
-            sendImageToServerButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -16),
+            sendImageToServerButton.topAnchor.constraint(equalTo: getImageFromNetButton.bottomAnchor, constant: Constants.topAnchorMargin),
+            sendImageToServerButton.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: Constants.leadingAnchorMargin),
+            sendImageToServerButton.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: Constants.trailingAnchorMargin),
             sendImageToServerButton.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -16),
             sendImageToServerButton.heightAnchor.constraint(equalToConstant: 45)
         ])

@@ -12,44 +12,36 @@ final class ImageCellViewModel {
     
     @Published private(set) var imageData: [String : Data] = [:]
     @Published private(set) var imageDataProgress: [String : Float] = [:]
-    @Published private(set) var progress: Float?
     
     private var imageUrl: String?
     private var subscriptions: Set<AnyCancellable> = []
     private let networkManager: ImagesListNetworkProtocol
-    private var downloadingProgressPublisher = PassthroughSubject<Float, Never>()
     
     init(networkManager: ImagesListNetworkProtocol) {
         self.networkManager = networkManager
     }
     
-    func getPublisherForCell() -> AnyPublisher<Float, Never> {
-        return downloadingProgressPublisher.eraseToAnyPublisher()
-    }
-    
-    func configureVm(with imageUrl: String) {
-        self.imageUrl = imageUrl
-    }
-    
     func loadImage(from url: String) {
-        networkManager.fetchImage(imageURL: url)
+        let downloadPublisher = networkManager.fetchImage(imageURL: url)
+        
+        downloadPublisher.dataPublisher
             .receive(on: DispatchQueue.main)
-            .sink { result in
-                switch result {
+            .sink { completion in
+                switch completion {
                 case .finished:
-                    print("image loaded to cell")
-                case .failure(_):
-                    print("error")
+                    print("Image loaded successfully.")
+                case .failure(let error):
+                    print("Error loading image: \(error)")
                 }
-            } receiveValue: { imageData in
-                self.imageData[url] = imageData
+            } receiveValue: { [weak self] data in
+                self?.imageData[url] = data
             }
             .store(in: &subscriptions)
         
-        networkManager.downloadProgressPublisher
+        downloadPublisher.progressPublisher
             .receive(on: DispatchQueue.main)
-            .sink { progressData in
-                self.imageDataProgress[url] = progressData
+            .sink { [weak self] progress in
+                self?.imageDataProgress[url] = progress
             }
             .store(in: &subscriptions)
     }

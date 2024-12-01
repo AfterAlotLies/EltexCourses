@@ -12,6 +12,10 @@ final class ImageCollectionCell: UICollectionViewCell {
     
     static let identifier: String = String(describing: ImageCollectionCell.self)
     
+    private enum Constants {
+        static let downloadImageButtonTitle = "Скачать"
+    }
+    
     private lazy var imageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
@@ -22,7 +26,7 @@ final class ImageCollectionCell: UICollectionViewCell {
     private lazy var downloadImageButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Скачать", for: .normal)
+        button.setTitle(Constants.downloadImageButtonTitle, for: .normal)
         button.addTarget(self, action: #selector(downloadButtonTapped), for: .touchUpInside)
         return button
     }()
@@ -41,20 +45,11 @@ final class ImageCollectionCell: UICollectionViewCell {
         return label
     }()
     
-    private lazy var errorLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.isHidden = true
-        label.textColor = .red
-        return label
-    }()
-    
     var viewModel: ImageCellViewModel?
     
     private var subscriptions: Set<AnyCancellable> = []
     private var imageUrl: String?
     private var isLoaded: Bool = false
-    private var isFailed: Bool = false
     
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -87,48 +82,44 @@ final class ImageCollectionCell: UICollectionViewCell {
 private extension ImageCollectionCell {
     
     func setupBindingForCell() {
-        viewModel?.$imageData
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] imageData in
-                guard let self = self, let url = self.imageUrl else { return }
-                if let data = imageData[url] {
-                    isLoaded = true
-                    self.downloadImageButton.isHidden = true
-                    self.imageView.isHidden = false
-                    if self.progressBar.progress == 1.0 {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self.progressBar.isHidden = true
-                            self.progressLabel.isHidden = true
-                            self.imageView.image = UIImage(data: data)
-                            self.imageView.contentMode = .scaleAspectFit
-                        }
-                    }
-                } else {
-                    self.imageView.isHidden = true
-                    self.downloadImageButton.isHidden = false
-                }
-            }
-            .store(in: &subscriptions)
-        
-        viewModel?.$imageDataProgress
-            .sink(receiveValue: { [weak self] progress in
-                guard let self = self, let url = self.imageUrl else { return }
-                if let progress = progress[url] {
-                    if !self.isLoaded {
+            viewModel?.$imageData
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] imageData in
+                    guard let self = self, let url = self.imageUrl else { return }
+                    if let data = imageData[url] {
+                        self.isLoaded = true
                         self.downloadImageButton.isHidden = true
-                        self.progressLabel.isHidden = false
-                        self.progressBar.isHidden = false
-                        self.progressBar.setProgress(progress, animated: true)
-                        self.progressLabel.text = "\(Int(progress * 100))%"
+                        self.imageView.isHidden = false
+                        self.progressBar.isHidden = true
+                        self.progressLabel.isHidden = true
+                        self.imageView.image = UIImage(data: data)
+                        self.imageView.contentMode = .scaleAspectFit
                     } else {
-                        return
+                        self.imageView.isHidden = true
+                        self.downloadImageButton.isHidden = false
                     }
-                } else {
-                    self.progressBar.isHidden = true
                 }
-            })
-            .store(in: &subscriptions)
-    }
+                .store(in: &subscriptions)
+            
+            viewModel?.$imageDataProgress
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] progressDict in
+                    guard let self = self, let url = self.imageUrl else { return }
+                    if let progress = progressDict[url] {
+                        if !self.isLoaded {
+                            self.downloadImageButton.isHidden = true
+                            self.progressLabel.isHidden = false
+                            self.progressBar.isHidden = false
+                            self.progressBar.setProgress(progress, animated: true)
+                            self.progressLabel.text = "\(Int(progress * 100))%"
+                        }
+                    } else {
+                        self.progressBar.isHidden = true
+                        self.progressLabel.isHidden = true
+                    }
+                }
+                .store(in: &subscriptions)
+        }
     
     @objc
     func downloadButtonTapped() {

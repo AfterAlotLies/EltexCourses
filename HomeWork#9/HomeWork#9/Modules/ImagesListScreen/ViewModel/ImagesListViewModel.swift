@@ -10,12 +10,12 @@ import Combine
 
 final class ImagesListViewModel {
     
+    @Published private(set) var images: [ImagesListModel] = []
+    
     private let networkManager: ImagesListNetworkProtocol
     private var subscriptions: Set<AnyCancellable> = []
     private(set) var navigateToNextScreen = PassthroughSubject<Void, Never>()
-    
-    @Published private(set) var images: [ImagesListModel] = []
-    
+        
     init(networkManager: ImagesListNetworkProtocol) {
         self.networkManager = networkManager
     }

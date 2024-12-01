@@ -10,6 +10,12 @@ import Combine
 
 final class MediaUploadViewController: UIViewController {
     
+    private enum Constants {
+        static let errorTitle = "Что-то пошло не так..."
+        static let messageTitle = "Успешно!"
+        static let okButtonTitle = "Ок"
+    }
+    
     private lazy var mediaUploadView: MediaUploadView = {
         let view = MediaUploadView(frame: .zero, viewModel: viewModel, delegate: self)
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -95,7 +101,6 @@ private extension MediaUploadViewController {
                     self?.mediaUploadView.setReadyState()
                 case .uploadingOnServer:
                     self?.mediaUploadView.setLoadingState(for: .uploadingOnServer)
-                    
                 }
             }
             .store(in: &subscriptions)
@@ -103,7 +108,8 @@ private extension MediaUploadViewController {
         viewModel.$requestError
             .sink { [weak self] error in
                 if !error.isEmpty {
-                    self?.showAlert(forMessage: error, withTitle: "Что-то пошло не так...")
+                    self?.showAlert(forMessage: error,
+                                    withTitle: Constants.errorTitle)
                 }
             }
             .store(in: &subscriptions)
@@ -111,7 +117,8 @@ private extension MediaUploadViewController {
         viewModel.$requestResultMessage
             .sink { [weak self] message in
                 if !message.isEmpty {
-                    self?.showAlert(forMessage: message, withTitle: "Успешно!")
+                    self?.showAlert(forMessage: message,
+                                    withTitle: Constants.messageTitle)
                 }
             }
             .store(in: &subscriptions)
@@ -120,7 +127,8 @@ private extension MediaUploadViewController {
     
     func showAlert(forMessage errorMessage: String, withTitle title: String) {
         let alert = UIAlertController(title: title, message: errorMessage, preferredStyle: .alert)
-        let okButton = UIAlertAction(title: "OK", style: .default, handler: { [weak self] _ in
+        let okButton = UIAlertAction(title: Constants.okButtonTitle, style: .default,
+                                     handler: { [weak self] _ in
             if let url = self?.uploadingImageUrl, !url.isEmpty {
                 self?.imageListViewModel.addNewImageURL(url)
                 self?.popToPreviousController()

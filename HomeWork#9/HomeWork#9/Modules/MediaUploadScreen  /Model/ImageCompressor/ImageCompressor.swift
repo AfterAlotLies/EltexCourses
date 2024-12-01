@@ -16,7 +16,6 @@ extension Data {
         var compression: CGFloat = 1.0
         
         if self.count < targetSize {
-            print("is okey")
             return self
         }
         
@@ -24,9 +23,7 @@ extension Data {
             compression -= 0.1
             if let compressedData = imageWithData.jpegData(compressionQuality: compression) {
                 currentData = compressedData
-            } else {
-                print("nono")
-            }
+            } 
         }
         return currentData
     }

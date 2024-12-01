@@ -70,9 +70,9 @@ final class MediaUploadViewModel {
                 case .failure(let error):
                     print(error.localizedDescription)
                 }
-            } receiveValue: { serverResponse in
-                self.processState = .ready
-                self.requestResultMessage = serverResponse
+            } receiveValue: { [weak self] serverResponse in
+                self?.processState = .ready
+                self?.requestResultMessage = serverResponse
             }
             .store(in: &subscriptions)
     }

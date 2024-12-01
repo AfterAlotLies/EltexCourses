@@ -9,6 +9,10 @@ import UIKit
 
 final class ImagesListView: UIView {
     
+    private enum Constants {
+        static let showNextScreenButtonTitle = "Добавить изображение на сервер"
+    }
+    
     private lazy var imagesCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.itemSize = CGSize(width: 150, height: 150)
@@ -24,11 +28,13 @@ final class ImagesListView: UIView {
     private lazy var showNextScreenButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Добавить изображение на сервер", for: .normal)
+        button.setTitle(Constants.showNextScreenButtonTitle, for: .normal)
         button.layer.cornerRadius = 10
         button.layer.borderColor = UIColor.black.cgColor
         button.layer.borderWidth = 1
-        button.addTarget(self, action: #selector(showNextControllerButtonHandler), for: .touchUpInside)
+        button.addTarget(self,
+                         action: #selector(showNextControllerButtonHandler),
+                         for: .touchUpInside)
         return button
     }()
     
@@ -67,7 +73,6 @@ extension ImagesListView: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         let imageUrl = imagesModel[indexPath.item].url
-        imageCellViewModel.configureVm(with: imageUrl)
         cell.viewModel = imageCellViewModel
         if let cachedImage = MemoryService.shared.getImageFromMemory(for: imageUrl) {
             cell.configureForCachedImage(cachedImage, imageUrl)
