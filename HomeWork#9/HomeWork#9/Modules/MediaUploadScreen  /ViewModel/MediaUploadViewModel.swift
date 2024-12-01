@@ -15,11 +15,13 @@ final class MediaUploadViewModel {
         case loading
         case optimizing
         case ready
+        case uploadingOnServer
     }
     
-    @Published private(set) var imageData: Data?
+    @Published private(set) var imageData: (Data?, String)?
     @Published private(set) var processState: ImageProcessState = .idle
     @Published private(set) var requestError: String = ""
+    @Published private(set) var requestResultMessage: String = ""
     
     private let networkService: MediaUploadNetworkProtocol
     private var subscriptions: Set<AnyCancellable> = []
@@ -35,7 +37,7 @@ final class MediaUploadViewModel {
             .sink { [weak self] result in
                 switch result {
                 case .finished:
-                    print("success")
+                    print("success to get image")
                 case .failure(let error):
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                         self?.processState = .idle
@@ -46,15 +48,32 @@ final class MediaUploadViewModel {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     self?.processState = .optimizing
                 }
-                DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+                DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
                     let compressedData = data.compress()
                     DispatchQueue.main.async {
-                        self?.imageData = compressedData
+                        self?.imageData = (compressedData, url)
                         self?.processState = .ready
                     }
                 }
             }
             .store(in: &subscriptions)
-
+    }
+    
+    func uploadImage(with imageData: Data) {
+        processState = .uploadingOnServer
+        networkService.uploadImageToServer(imageData: imageData)
+            .receive(on: DispatchQueue.main)
+            .sink { result in
+                switch result {
+                case .finished:
+                    print("uploaded to server")
+                case .failure(let error):
+                    print(error.localizedDescription)
+                }
+            } receiveValue: { serverResponse in
+                self.processState = .ready
+                self.requestResultMessage = serverResponse
+            }
+            .store(in: &subscriptions)
     }
 }

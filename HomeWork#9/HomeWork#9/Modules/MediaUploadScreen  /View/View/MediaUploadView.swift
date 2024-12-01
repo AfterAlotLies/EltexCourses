@@ -7,7 +7,18 @@
 
 import UIKit
 
+protocol MediaUploadViewDelegate: AnyObject {
+    func showImagePicker()
+    func setImageURLFromGallery(_ url: String)
+}
+
 final class MediaUploadView: UIView {
+    
+    enum LoadingState {
+        case loadingFromNet
+        case optimizingImage
+        case uploadingOnServer
+    }
     
     private lazy var uploadedImageView: UIImageView = {
         let imageView = UIImageView()
@@ -45,6 +56,7 @@ final class MediaUploadView: UIView {
         button.layer.cornerRadius = 10
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.black.cgColor
+        button.addTarget(self, action: #selector(getImageFromGallaryTapped), for: .touchUpInside)
         return button
     }()
     
@@ -66,12 +78,16 @@ final class MediaUploadView: UIView {
         button.layer.cornerRadius = 10
         button.layer.borderWidth = 1
         button.layer.borderColor = UIColor.black.cgColor
+        button.addTarget(self, action: #selector(uploadImageToServerTapped), for: .touchUpInside)
         return button
     }()
     
     private let viewModel: MediaUploadViewModel
     
-    init(frame: CGRect, viewModel: MediaUploadViewModel) {
+    weak var delegete: MediaUploadViewDelegate?
+    
+    init(frame: CGRect, viewModel: MediaUploadViewModel, delegate: MediaUploadViewDelegate) {
+        self.delegete = delegate
         self.viewModel = viewModel
         super.init(frame: frame)
         setupView()
@@ -89,12 +105,19 @@ final class MediaUploadView: UIView {
         loaderImageLabel.isHidden = true
     }
     
-    func setLoadingState() {
+    func setLoadingState(for loadingState: LoadingState) {
         uploadedImageView.isHidden = true
         imageLoader.isHidden = false
         imageLoader.startAnimating()
         loaderImageLabel.isHidden = false
-        loaderImageLabel.text = "Загрузка изображения из сети..."
+        switch loadingState {
+        case .loadingFromNet:
+            loaderImageLabel.text = "Загрузка изображения из сети..."
+        case .optimizingImage:
+            loaderImageLabel.text = "Оптимизация картинки..."
+        case .uploadingOnServer:
+            loaderImageLabel.text = "Загрузка изображения на сервер..."
+        }
     }
     
     func setReadyState() {
@@ -104,12 +127,13 @@ final class MediaUploadView: UIView {
         loaderImageLabel.isHidden = true
     }
     
-    func setImage(with data: Data) {
+    func setImage(with data: Data, for url: String) {
         uploadedImageView.image = UIImage(data: data)
     }
     
-    func setOptimizingState() {
-        loaderImageLabel.text = "Оптимизация картинки"
+    func setImageFromGallery(_ image: UIImage) {
+        uploadedImageView.isHidden = false
+        uploadedImageView.image = image
     }
 }
 
@@ -117,9 +141,38 @@ private extension MediaUploadView {
     
     @objc
     func getImageFromURLTapped() {
-        guard let imageURL = inputUrlToDownloadTextField.text, !imageURL.isEmpty else { return }
+        guard let imageURL = inputUrlToDownloadTextField.text,
+              !imageURL.isEmpty else {
+            return
+        }
         viewModel.getImageBaseOnURL(imageURL)
+    }
+    
+    @objc
+    func getImageFromGallaryTapped() {
+        delegete?.showImagePicker()
         inputUrlToDownloadTextField.text = ""
+    }
+    
+    @objc
+    func uploadImageToServerTapped() {
+        DispatchQueue.main.async {
+            guard let imageData = self.uploadedImageView.image?.pngData() else { return }
+            guard let compressedImageData = imageData.compress() else { return }
+            if let cachedImage = UIImage(data: compressedImageData) {
+                if let imageUrl = self.inputUrlToDownloadTextField.text {
+                    if imageUrl.isEmpty {
+                        let urlGallery = UUID().uuidString
+                        MemoryService.shared.saveImageToMemory(cachedImage, for: urlGallery)
+                        self.delegete?.setImageURLFromGallery(urlGallery)
+                    } else {
+                        MemoryService.shared.saveImageToMemory(cachedImage, for: imageUrl)
+                    }
+                }
+            }
+            self.viewModel.uploadImage(with: compressedImageData)
+            self.inputUrlToDownloadTextField.text = ""
+        }
     }
     
     func setupView() {
